@@ -1,0 +1,26 @@
+{
+  "name": "store-map",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "nodemon src/index.js",
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mariadb": "^3.4.5",
+    "morgan": "^1.10.0",
+    "mysql2": "^3.14.3",
+    "redis": "^4.6.14",
+    "sequelize": "^6.37.7",
+    "sequelize-cli": "^6.6.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  },
+  "bundleDependencies": [
+    "mariadb"
+  ]
+}

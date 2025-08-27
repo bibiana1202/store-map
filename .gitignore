@@ -1,0 +1,20 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.DS_Store
+
+# Env / secrets
+.env
+.env.*.local
+
+# Logs & misc
+*.log
+coverage/
+
+# Sequelize (JSON 설정 쓰게 될 경우를 대비)
+config/config.json
+
+# Docker
+*.pid

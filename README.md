@@ -197,8 +197,9 @@ git push origin main
 ## 🏗️ 기술 스택
 
 - **Backend**: Node.js, Express
-- **Database**: PostgreSQL/MySQL
-- **Cache**: Redis
+- **Database**: MariaDB 11
+- **ORM** : Sequelize ORM
+- **Cache**: Redis 7
 - **Geocoding**: 카카오맵 API, 네이버맵 API
 - **Documentation**: Swagger/OpenAPI
 - **Monitoring**: RedisInsight

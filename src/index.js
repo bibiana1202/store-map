@@ -7,7 +7,13 @@ const app = express();
 app.use(express.json());
 app.use(morgan('dev'));
 
+const swaggerUi = require('swagger-ui-express');
+const { swaggerSpec } = require('./docs/swagger');
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec)); // UI
+app.get('/openapi.json', (req, res) => res.json(swaggerSpec));   // JSON
+
 const storesRouter = require('./routes/stores');
+app.use(express.json());
 app.use('/api',storesRouter);
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';

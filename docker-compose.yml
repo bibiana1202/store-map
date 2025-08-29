@@ -11,6 +11,7 @@ services:
     volumes:
       - ./src:/app/src          # 코드 변경 실시간 반영
       - /app/node_modules       # 컨테이너 내부 모듈 고정
+      - ./:/app
     depends_on:
       - redis
       - db

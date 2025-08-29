@@ -1,69 +1,215 @@
-# store-map
+# 🏪 백년가게 Store Map API
 
-백년가게(및 기타 상점) 데이터를 **지도에 표시**하기 위한 백엔드 API 프로젝트입니다.  
-**Docker + Node.js(Express) + Sequelize + MariaDB + Redis** 구성으로 개발 환경을 분리하고,  
-읽기 트래픽이 많은 지도 특성상 **캐시(Redis)** 를 적용하여 응답 속도와 부하를 개선합니다.
+> 전통 가게 위치 정보 관리 및 검색 API 서비스
 
-## 기술 스택
-- Node.js 20, Express
-- Sequelize ORM (MariaDB/MySQL)
-- Redis (캐시/레이트리밋 예정)
-- Docker / docker compose
-- (개발 편의) nodemon, morgan
+## ✨ Features
 
-## 폴더 구조(요약)
-store-map/
-├─ src/
-│ ├─ index.js # 서버 엔트리 (헬스체크 등)
-│ ├─ routes/
-│ │ └─ stores.js # /api/stores 목록 API
-│ ├─ lib/ # (redis, db 유틸 등 — 필요 시)
-│ └─ utils/ # (지오 유틸 등 — 필요 시)
-├─ models/ # Sequelize 모델들
-├─ migrations/ # Sequelize 마이그레이션
-├─ config/
-│ └─ config.js # Sequelize 환경 설정(.env 기반)
-├─ Dockerfile
-├─ docker-compose.yml
-├─ .env # (커밋 금지)
-└─ README.md
+- 📊 **CSV Import & DB 업서트** - 대량 데이터 일괄 처리
+- 🗺️ **Geocoding** - 카카오/네이버 API 지원 (배치/단건)
+- 📍 **Nearby Search** - 하버사인 공식 기반 반경 검색
+- ⚡ **Redis 캐싱** - 빠른 응답속도 및 API 부하 감소
+- 📝 **Swagger UI** - 인터랙티브 API 문서
+- 🔍 **RedisInsight** - 캐시 상태 실시간 모니터링
 
+---
 
-## 사전 준비
-- Docker Desktop
-- Node.js 20+
-- (선택) RedisInsight, DBeaver
+## 📡 API Endpoints
 
-## 환경 변수(.env 예시) — 커밋 금지
-- PORT=3000
-- REDIS_URL=redis://redis:6379
-- DB_HOST=db
-- DB_PORT=3306
-- DB_USER=storeuser
-- DB_PASS=storepw
-- DB_NAME=storedb
+### 🏪 Store 목록 조회
+```http
+GET /api/stores
+```
+**Query Parameters:**
+- `limit`: 조회할 가게 수 (기본값: 50, 최대: 200)
 
-## 실행 방법 (개발: Docker)
-- docker compose up -d --build
-- docker compose logs -f app
-- 앱: http://localhost:3000
-- 헬스체크: GET /health (Redis 가동 시 PONG)
+**Response:**
+```json
+{
+  "status": "success",
+  "result": [
+    {
+      "id": 1,
+      "name": "전통찻집",
+      "address": "서울 종로구 인사동길 12",
+      "category": "음식점",
+      "latitude": 37.5703,
+      "longitude": 126.9850
+    }
+  ]
+}
+```
 
-## DB 마이그레이션
-- docker compose exec app npx sequelize-cli db:migrate
+### 🗺️ 주소 → 좌표 변환
+```http
+POST /api/geocode
+```
+**Request Body:**
+```json
+{
+  "address": "서울 강남구 테헤란로 152"
+}
+```
 
-## 기본 API
-- GET /api/stores?limit=50 : 상점 목록(최신순)
-- (예정) GET /api/nearby?lat=&lng=&radius=&category= : 반경 검색 + Redis 캐시
-- (예정) POST /api/geocode : 주소 → 위/경도(카카오/네이버)
+**Response:**
+```json
+{
+  "status": "success",
+  "result": {
+    "latitude": 37.5048,
+    "longitude": 127.0406,
+    "formatted_address": "서울 강남구 테헤란로 152"
+  }
+}
+```
 
-## 테스트 예시
-- curl "http://localhost:3000/api/stores?limit=5"
+### 📍 주변 가게 검색
+```http
+GET /api/nearby
+```
+**Query Parameters:**
+- `lat`: 위도 (필수)
+- `lng`: 경도 (필수)
+- `radius`: 검색 반경 (km, 기본값: 1)
+- `category`: 카테고리 필터 (선택)
 
-## 개발 메모
-- .env는 이미지에 포함하지 않음. compose의 env_file로 주입
-- Sequelize 설정은 config/config.js에서 .env를 읽어 사용
-- MariaDB 드라이버는 mariadb(dialect: mariadb)
+**Response:**
+```json
+{
+  "status": "success",
+  "cached": true,
+  "result": [
+    {
+      "id": 1,
+      "name": "전통찻집",
+      "address": "서울 종로구 인사동길 12",
+      "category": "음식점",
+      "latitude": 37.5703,
+      "longitude": 126.9850,
+      "distance_km": 0.8
+    }
+  ]
+}
+```
 
-## 라이선스
-Private (TBD)
+> 💡 **캐시 정보**: Redis TTL = 120초, `cached: true/false`로 캐시 히트 여부 확인
+
+---
+
+## 🛠️ 관리 Scripts
+
+### 📊 CSV 데이터 Import
+
+대용량 CSV 파일을 데이터베이스에 일괄 업로드합니다.
+
+```bash
+docker exec -it store_map_app sh -lc \
+"CSV_ENCODING=cp949 node scripts/import_csv.js ./data/stores.csv"
+```
+
+**지원 형식:**
+- 인코딩: `cp949`, `utf8`
+- 필드: `name`, `address`, `category`, `phone` 등
+
+### 🗺️ 좌표 일괄 변환 (Geocoding Batch)
+
+주소 정보만 있는 데이터에 위도/경도를 일괄 추가합니다.
+
+```bash
+docker exec -it store_map_app sh -lc \
+"GEOCODE_DELAY=120 node scripts/geocode_batch.js"
+```
+
+**설정 옵션:**
+- `GEOCODE_DELAY`: API 호출 간격 (밀리초)
+- 카카오/네이버 API 순차 시도
+
+---
+
+## 📚 문서 & 모니터링
+
+### 📝 Swagger UI
+인터랙티브 API 문서를 통해 실시간으로 API를 테스트할 수 있습니다.
+
+- **Swagger UI**: [http://localhost:3000/docs](http://localhost:3000/docs)
+- **OpenAPI Spec**: [http://localhost:3000/openapi.json](http://localhost:3000/openapi.json)
+
+### 🔍 RedisInsight
+Redis 캐시 상태를 실시간으로 모니터링할 수 있습니다.
+
+- **접속 URL**: [http://localhost:5540](http://localhost:5540)
+- **모니터링 키**: `geo:*` 패턴으로 캐시된 검색 결과 확인
+- **TTL 확인**: 캐시 만료시간 실시간 추적
+
+---
+
+## 🚀 Quick Start
+
+### 1. 프로젝트 클론
+```bash
+git clone <repository-url>
+cd store-map-api
+```
+
+### 2. 환경 설정
+```bash
+# 환경변수 설정
+cp .env.example .env
+
+# Docker 컨테이너 실행
+docker-compose up -d
+```
+
+### 3. 데이터 Import
+```bash
+# CSV 데이터 업로드
+docker exec -it store_map_app sh -lc \
+"CSV_ENCODING=cp949 node scripts/import_csv.js ./data/stores.csv"
+
+# 좌표 정보 생성
+docker exec -it store_map_app sh -lc \
+"GEOCODE_DELAY=120 node scripts/geocode_batch.js"
+```
+
+### 4. API 테스트
+- Swagger UI: http://localhost:3000/docs
+- RedisInsight: http://localhost:5540
+
+---
+
+## 🔧 Git 배포
+
+```bash
+# 변경사항 확인
+git status
+
+# 모든 변경사항 스테이징
+git add .
+
+# 커밋 메시지 작성
+git commit -m "docs: update README and project notes (CSV import, geocoding, nearby, swagger, redis cache)"
+
+# 원격 저장소에 푸시
+git push origin main
+```
+
+---
+
+## 🏗️ 기술 스택
+
+- **Backend**: Node.js, Express
+- **Database**: PostgreSQL/MySQL
+- **Cache**: Redis
+- **Geocoding**: 카카오맵 API, 네이버맵 API
+- **Documentation**: Swagger/OpenAPI
+- **Monitoring**: RedisInsight
+- **Deployment**: Docker, Docker Compose
+
+---
+
+## 📞 Support
+
+프로젝트 관련 문의사항이 있으시면 Issues를 통해 연락해주세요.
+
+- 🐛 **Bug Report**: [Issues](https://github.com/your-repo/issues)
+- 💡 **Feature Request**: [Discussions](https://github.com/your-repo/discussions)
+- 📖 **Documentation**: [Wiki](https://github.com/your-repo/wiki)
